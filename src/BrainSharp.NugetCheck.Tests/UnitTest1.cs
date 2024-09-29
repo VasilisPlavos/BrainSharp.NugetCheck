@@ -9,7 +9,7 @@ namespace BrainSharp.NugetCheck.Tests
         [SetUp]
         public void Setup()
         {
-            var deleteLocalStorage = false;
+            var deleteLocalStorage = true;
             if (deleteLocalStorage) LocalStorageService.DeleteStorage();
         }
 
