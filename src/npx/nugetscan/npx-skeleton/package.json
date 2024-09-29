@@ -1,0 +1,20 @@
+{
+  "name": "nugetscan",
+  "version": "0.0.28",
+  "description": "Command line to check nugets and transitives for vulnerabilites",
+  "bin": "./consoleapp/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VasilisPlavos/Learn/tree/main/dotnet/NuGets/nugetcheck/npx/nugetscan"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/VasilisPlavos/Learn/issues/new?title=nugetscan.npx"
+  },
+  "homepage": "https://github.com/VasilisPlavos/Learn/tree/main/dotnet/NuGets/nugetcheck/npx/nugetscan"
+}
