@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Title>This is the title of the solution</Title>
+    <Description>This is the description</Description>
+    <PackageProjectUrl>https://github.com/VasilisPlavos/Learn/tree/main/dotnet/NuGets\nugetcheck\BrainSharp.NugetCheck</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/VasilisPlavos/Learn/tree/main/dotnet/NuGets\nugetcheck\BrainSharp.NugetCheck</RepositoryUrl>
+    <PackageTags>nugetscheck</PackageTags>
+    <PackageReleaseNotes>Notes here</PackageReleaseNotes>
+    <!-- <PackageReadmeFile>README.md</PackageReadmeFile> -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- This is the name of the NuGet package in the Nuget.org Gallery -->
+    <PackageId>BrainSharp.NugetCheck</PackageId>
+    <Version>0.0.1-preview</Version>
+    <Authors>Vasilis Plavos</Authors>
+    <Company>BrainSharp</Company>
+  </PropertyGroup>
+
+<!-- 
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+   -->
+
+  <ItemGroup>
+    <PackageReference Include="NuGet.Protocol" Version="6.10.1" />
+  </ItemGroup>
+
+</Project>
