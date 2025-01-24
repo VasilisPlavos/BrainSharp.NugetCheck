@@ -1,6 +1,6 @@
 {
   "name": "nugetcheck",
-  "version": "0.0.20",
+  "version": "0.0.23",
   "description": "Command line to check nugets and transitives for vulnerabilites",
   "bin": {
     "nugetcheck": "consoleapp/BrainSharp.NugetCheck.ConsoleApp.exe"
@@ -10,13 +10,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/VasilisPlavos/Learn/tree/main/dotnet/NuGets/nugetcheck/npx/nugetcheck"
+    "url": "https://github.com/VasilisPlavos/BrainSharp.NugetCheck/tree/main/src/npx/nugetcheck"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/VasilisPlavos/Learn/issues/new?title=nugetcheck.npx"
+    "url": "https://github.com/VasilisPlavos/BrainSharp.NugetCheck/issues/new?title=nugetcheck.npx"
   },
-  "homepage": "https://github.com/VasilisPlavos/Learn/tree/main/dotnet/NuGets/nugetcheck/npx/nugetcheck"
+  "homepage": "https://github.com/VasilisPlavos/BrainSharp.NugetCheck/tree/main/src/npx/nugetcheck"
 }

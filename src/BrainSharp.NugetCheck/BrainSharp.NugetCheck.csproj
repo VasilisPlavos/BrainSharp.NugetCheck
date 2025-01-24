@@ -5,8 +5,8 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Title>This is the title of the solution</Title>
     <Description>This is the description</Description>
-    <PackageProjectUrl>https://github.com/VasilisPlavos/Learn/tree/main/dotnet/NuGets\nugetcheck\BrainSharp.NugetCheck</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/VasilisPlavos/Learn/tree/main/dotnet/NuGets\nugetcheck\BrainSharp.NugetCheck</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/VasilisPlavos/BrainSharp.NugetCheck</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/VasilisPlavos/BrainSharp.NugetCheck</RepositoryUrl>
     <PackageTags>nugetscheck</PackageTags>
     <PackageReleaseNotes>Notes here</PackageReleaseNotes>
     <!-- <PackageReadmeFile>README.md</PackageReadmeFile> -->

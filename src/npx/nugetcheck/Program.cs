@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 
 // clean up .NET publish directory
-var rootPath = Directory.GetParent(@"..");
+var rootPath = Directory.GetParent(@"../../../../../");
 var projectDir = $"{rootPath}\\BrainSharp.NugetCheck.Console";
 var publishDir = $"{projectDir}\\bin\\Release\\net8.0\\publish";
 if (Directory.Exists(publishDir)) Directory.Delete(publishDir, true);
@@ -14,7 +14,7 @@ await ExecuteProcessAsync("dotnet", "publish", projectDir);
 
 // npm version patch
 var npmFileName = "C:\\Program Files\\nodejs\\npm.cmd";
-var npxProjectDir = Directory.GetCurrentDirectory();
+var npxProjectDir = Directory.GetParent(@"../../../");
 var npxSkeletonDir = $"{npxProjectDir}\\npx-skeleton";
 
 var version = await ExecuteProcessAsync(npmFileName, "version patch", npxSkeletonDir);
