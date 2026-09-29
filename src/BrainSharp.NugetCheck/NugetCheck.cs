@@ -196,38 +196,42 @@ public class NugetCheck
         return package.PackageMetadataRegistrations.FirstOrDefault(info => NuGetVersion.Parse(info.Identity.Version) == version);
     }
 
-    private static List<PackageDto> GetProjectPackageList(string filePath) => GetProjectPackageList(XDocument.Load(filePath));
-    private static List<PackageDto> GetProjectPackageList(XDocument csProjToXDocument)
-    {
-        var listOfPackages = new List<PackageDto>();
-        var itemGroups = csProjToXDocument.Elements().ToList().Elements().ToList().Where(x => x.Name == "ItemGroup").ToList();
-        foreach (var itemGroup in itemGroups)
-        {
-            foreach (var item in itemGroup.Elements().Where(x => x.Name == "PackageReference").ToList())
+    /// <summary>Reads every PackageReference with an Include, from any ItemGroup, ignoring XML namespaces.</summary>
+    internal static List<PackageDto> ReadPackageReferences(XDocument project) =>
+        project.Descendants()
+            .Where(element => element.Name.LocalName == "PackageReference" && element.Parent?.Name.LocalName == "ItemGroup")
+            .Select(element => new
             {
-                var inc = item.Attributes().ToList();
-                var version = inc.Where(x => x.Name == "Version").Select(x => x.Value).FirstOrDefault();
-                var packageName = inc.Where(x => x.Name == "Include").Select(x => x.Value).FirstOrDefault();
-                listOfPackages.Add(new PackageDto
-                {
-                    Version = version!,
-                    NugetPackageId = packageName!
-                });
-            }
-        }
-
-        return listOfPackages;
-    }
+                Id = (string?)element.Attribute("Include"),
+                Version = (string?)element.Attribute("Version")
+                          ?? element.Elements().FirstOrDefault(child => child.Name.LocalName == "Version")?.Value
+            })
+            .Where(reference => !string.IsNullOrWhiteSpace(reference.Id))
+            .Select(reference => new PackageDto
+            {
+                NugetPackageId = reference.Id!.Trim(),
+                Version = string.IsNullOrWhiteSpace(reference.Version) ? null : reference.Version.Trim()
+            })
+            .ToList();
 
     public async Task<ProjectResults> CheckPackageAndTransientsAsync(string projectFilePath, CancellationToken ct = default)
     {
-        var packageReferences = GetProjectPackageList(projectFilePath);
+        var packageReferences = ReadPackageReferences(XDocument.Load(projectFilePath));
 
         var packageReferencesResults = new List<NugetPackageResults>();
         foreach (var package in packageReferences)
         {
-            var packageResults = await CheckPackageAndTransientsAsync(package.NugetPackageId, package.Version, ct);
-            packageReferencesResults.Add(packageResults);
+            if (package.Version == null)
+            {
+                packageReferencesResults.Add(new NugetPackageResults
+                {
+                    NugetPackageId = package.NugetPackageId,
+                    Warnings = [CreateWarning(WarningMessages.VersionNotSpecified, package.NugetPackageId)]
+                });
+                continue;
+            }
+
+            packageReferencesResults.Add(await CheckPackageAndTransientsAsync(package.NugetPackageId, package.Version, ct));
         }
 
         return new ProjectResults

@@ -30,4 +30,8 @@
     <PackageReference Include="NuGet.Protocol" Version="7.9.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="BrainSharp.NugetCheck.Tests" />
+  </ItemGroup>
+
 </Project>

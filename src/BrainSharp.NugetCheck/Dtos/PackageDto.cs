@@ -1,7 +1,9 @@
-﻿namespace BrainSharp.NugetCheck.Dtos;
+namespace BrainSharp.NugetCheck.Dtos;
 
 public class PackageDto
 {
-    public string NugetPackageId { get; set; }
-    public string Version { get; set; }
+    public required string NugetPackageId { get; set; }
+
+    /// <summary>Null when the project does not specify one (e.g. Central Package Management).</summary>
+    public string? Version { get; set; }
 }
