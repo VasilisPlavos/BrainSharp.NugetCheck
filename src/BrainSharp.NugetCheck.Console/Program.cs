@@ -1,43 +1,57 @@
-﻿namespace BrainSharp.NugetCheck.ConsoleApp;
+using BrainSharp.NugetCheck.Services;
+
+namespace BrainSharp.NugetCheck.ConsoleApp;
 
 class Program
 {
-    static async Task Main(string[] args)
+    static Task<int> Main(string[] args) =>
+        RunAsync(args, Directory.GetCurrentDirectory(), new NugetCheck(progress: new ConsoleProgress()));
+
+    internal static async Task<int> RunAsync(string[] args, string currentDirectory, NugetCheck nugetCheck)
     {
-        if (!args.Any())
+        try
         {
-            Console.WriteLine("Wrong command!");
-            return;
-        }
+            switch (CommandLineParser.Parse(args, currentDirectory))
+            {
+                case CliCommand.ShowStorage:
+                    Console.WriteLine(FilePackageCache.DefaultLocation);
+                    return ExitCodes.Success;
 
-        if (args[0] == ".")
+                case CliCommand.ScanDirectory command:
+                    var (warningCount, failedCount) = await Processors.ScanDirectoryAsync(nugetCheck, command.DirectoryPath);
+                    return ExitCodes.FromScan(warningCount, failedCount);
+
+                case CliCommand.ScanProject command when File.Exists(command.ProjectFilePath):
+                    return ExitCodes.FromWarningCount(await Processors.ScanProjectAsync(nugetCheck, command.ProjectFilePath));
+
+                case CliCommand.ScanProject command:
+                    return PrintUsage($"File not found: {command.ProjectFilePath}");
+
+                case CliCommand.ScanPackage command:
+                    Console.WriteLine($"Scanning package {command.PackageId} with version {command.Version}");
+                    return ExitCodes.FromWarningCount(await Processors.CheckPackageAndTransientsAsync(nugetCheck, command.PackageId, command.Version));
+
+                case CliCommand.Invalid command:
+                    return PrintUsage(command.Reason);
+
+                default:
+                    return PrintUsage("Unknown command.");
+            }
+        }
+        catch (Exception e)
         {
-            await Processors.ScanEverythingAsync(Directory.GetCurrentDirectory());
-            return;
+            // e.g. nuget.org unreachable or a malformed project file: a readable message instead of a stack trace
+            Console.Error.WriteLine();
+            Console.Error.WriteLine($"The scan could not run: {e.Message}");
+            return ExitCodes.ScanFailed;
         }
+    }
 
-        if (args[0] == "storage")
-        {
-            Console.WriteLine(Path.Combine(AppContext.BaseDirectory, "storage"));
-            return;
-        }
-
-        if (args[0].EndsWith(".csproj"))
-        {
-            var filePath = File.Exists(args[0]) ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), args[0]);
-            await Processors.ScanProjectAsync(filePath);
-            return;
-        }
-
-        if (args[0] == "package" && args[2] == "--version")
-        {
-            var packageName = args[1];
-            var packageVersion = args[3];
-            Console.WriteLine($"Scanning package {packageName} with version {packageVersion}");
-            await Processors.CheckPackageAndTransientsAsync(packageName, packageVersion);
-            return;
-        }
-
-        Console.WriteLine("Wrong command!");
+    private static int PrintUsage(string reason)
+    {
+        Console.Error.WriteLine(reason);
+        Console.Error.WriteLine();
+        Console.Error.WriteLine(CommandLineParser.Usage);
+        return ExitCodes.InvalidUsage;
     }
 }
