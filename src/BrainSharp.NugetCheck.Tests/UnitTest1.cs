@@ -4,6 +4,7 @@ using BrainSharp.NugetCheck.Services;
 
 namespace BrainSharp.NugetCheck.Tests
 {
+    [Category("Integration")]
     public class Tests
     {
         [SetUp]
