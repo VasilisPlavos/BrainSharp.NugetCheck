@@ -79,6 +79,22 @@ public class TargetFrameworkTests
         Assert.That(BreadCrumbs(results), Is.EqualTo(new[] { "A 1.0.0 > Old 1.0.0" }));
     }
 
+    // The SDK restores a bare "net8.0-windows" as net8.0-windows7.0; other platforms default to their current workload version.
+    [TestCase("net8.0-windows", "net6.0-windows7.0")]
+    [TestCase("net8.0-android", "net8.0-android34.0")]
+    public async Task CheckPackageAndTransientsAsync_PlatformWithoutVersion_UsesPlatformGroup(string framework, string platformGroup)
+    {
+        var source = new FakeMetadataSource()
+            .WithPackage("A", "1.0.0")
+            .WithDependencyGroup("A", "1.0.0", "net6.0")
+            .WithDependencyGroup("A", "1.0.0", platformGroup, "Old [1.0.0, )")
+            .WithPackage("Old", "1.0.0", vulnerable: true);
+
+        var results = await CreateNugetCheck(source).CheckPackageAndTransientsAsync("A", "1.0.0", framework);
+
+        Assert.That(BreadCrumbs(results), Is.EqualTo(new[] { "A 1.0.0 > Old 1.0.0" }));
+    }
+
     [Test]
     public void CheckPackageAndTransientsAsync_UnsupportedFramework_ThrowsArgumentException()
     {

@@ -68,12 +68,24 @@ public class NugetCheck
         var walks = new List<NugetPackageResults>();
         foreach (var framework in frameworks)
         {
-            walks.Add(await WalkRootAsync(mainPackageName, mainPackageVersion, framework, ct));
+            walks.Add(await WalkRootAsync(mainPackageName, mainPackageVersion, WithRestorePlatformVersion(framework), ct));
         }
 
         var results = walks[0];
         results.Warnings = walks.SelectMany(walk => walk.Warnings).DistinctBy(warning => (warning.Message, warning.BreadCrumb)).ToList();
         return results;
+    }
+
+    // The SDK restores a bare "net8.0-windows" as net8.0-windows7.0; other platforms get their workload's version,
+    // which we cannot know, so any version of that platform is accepted.
+    private static NuGetFramework WithRestorePlatformVersion(NuGetFramework framework)
+    {
+        if (!framework.HasPlatform || framework.PlatformVersion.Major > 0 || framework.PlatformVersion.Minor > 0) return framework;
+
+        var platformVersion = string.Equals(framework.Platform, "windows", StringComparison.OrdinalIgnoreCase)
+            ? new Version(7, 0)
+            : new Version(int.MaxValue, 0);
+        return new NuGetFramework(framework.Framework, framework.Version, framework.Platform, platformVersion);
     }
 
     private async Task<NugetPackageResults> WalkRootAsync(string mainPackageName, string mainPackageVersion, NuGetFramework? framework, CancellationToken ct)
