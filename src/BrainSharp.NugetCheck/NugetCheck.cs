@@ -273,9 +273,26 @@ public class NugetCheck
             })
             .ToList();
 
+    /// <summary>
+    /// Reads TargetFramework and TargetFrameworks from every PropertyGroup, ignoring conditions and XML namespaces.
+    /// MSBuild properties such as "$(Tfm)" and unknown frameworks are skipped.
+    /// </summary>
+    internal static List<NuGetFramework> ReadTargetFrameworks(XDocument project) =>
+        project.Descendants()
+            .Where(element => element.Name.LocalName is "TargetFramework" or "TargetFrameworks"
+                              && element.Parent?.Name.LocalName == "PropertyGroup")
+            .SelectMany(element => element.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(ParseTargetFramework)
+            .OfType<NuGetFramework>()
+            .Distinct()
+            .ToList();
+
+    /// <summary>Checks every PackageReference of a project for the project's target frameworks; without one, every dependency group is checked.</summary>
     public async Task<ProjectResults> CheckPackageAndTransientsAsync(string projectFilePath, CancellationToken ct = default)
     {
-        var packageReferences = ReadPackageReferences(XDocument.Load(projectFilePath));
+        var project = XDocument.Load(projectFilePath);
+        var packageReferences = ReadPackageReferences(project);
+        var targetFrameworks = ReadTargetFrameworks(project);
 
         var packageReferencesResults = new List<NugetPackageResults>();
         foreach (var package in packageReferences)
@@ -290,12 +307,13 @@ public class NugetCheck
                 continue;
             }
 
-            packageReferencesResults.Add(await CheckRootAsync(package.NugetPackageId, package.Version, null, ct));
+            packageReferencesResults.Add(await CheckRootAsync(package.NugetPackageId, package.Version, targetFrameworks, ct));
         }
 
         return new ProjectResults
         {
             ProjectFilePath = projectFilePath,
+            TargetFrameworks = targetFrameworks.Select(framework => framework.GetShortFolderName()).ToList(),
             PackageReferences = packageReferencesResults,
             TotalWarnings = packageReferencesResults.Sum(package => package.Warnings.Count)
         };
