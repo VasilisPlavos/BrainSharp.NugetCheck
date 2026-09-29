@@ -1,43 +1,43 @@
-﻿namespace BrainSharp.NugetCheck.ConsoleApp;
+using BrainSharp.NugetCheck.Services;
+
+namespace BrainSharp.NugetCheck.ConsoleApp;
 
 class Program
 {
-    static async Task Main(string[] args)
+    static async Task<int> Main(string[] args)
     {
-        if (!args.Any())
+        switch (CommandLineParser.Parse(args, Directory.GetCurrentDirectory()))
         {
-            Console.WriteLine("Wrong command!");
-            return;
-        }
+            case CliCommand.ShowStorage:
+                Console.WriteLine(FilePackageCache.DefaultLocation);
+                return ExitCodes.Success;
 
-        if (args[0] == ".")
-        {
-            await Processors.ScanEverythingAsync(Directory.GetCurrentDirectory());
-            return;
-        }
+            case CliCommand.ScanDirectory command:
+                return ExitCodes.FromWarningCount(await Processors.ScanDirectoryAsync(command.DirectoryPath));
 
-        if (args[0] == "storage")
-        {
-            Console.WriteLine(BrainSharp.NugetCheck.Services.FilePackageCache.DefaultLocation);
-            return;
-        }
+            case CliCommand.ScanProject command when File.Exists(command.ProjectFilePath):
+                return ExitCodes.FromWarningCount(await Processors.ScanProjectAsync(command.ProjectFilePath));
 
-        if (args[0].EndsWith(".csproj"))
-        {
-            var filePath = File.Exists(args[0]) ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), args[0]);
-            await Processors.ScanProjectAsync(filePath);
-            return;
-        }
+            case CliCommand.ScanProject command:
+                return PrintUsage($"File not found: {command.ProjectFilePath}");
 
-        if (args[0] == "package" && args[2] == "--version")
-        {
-            var packageName = args[1];
-            var packageVersion = args[3];
-            Console.WriteLine($"Scanning package {packageName} with version {packageVersion}");
-            await Processors.CheckPackageAndTransientsAsync(packageName, packageVersion);
-            return;
-        }
+            case CliCommand.ScanPackage command:
+                Console.WriteLine($"Scanning package {command.PackageId} with version {command.Version}");
+                return ExitCodes.FromWarningCount(await Processors.CheckPackageAndTransientsAsync(command.PackageId, command.Version));
 
-        Console.WriteLine("Wrong command!");
+            case CliCommand.Invalid command:
+                return PrintUsage(command.Reason);
+
+            default:
+                return PrintUsage("Unknown command.");
+        }
+    }
+
+    private static int PrintUsage(string reason)
+    {
+        Console.Error.WriteLine(reason);
+        Console.Error.WriteLine();
+        Console.Error.WriteLine(CommandLineParser.Usage);
+        return ExitCodes.InvalidUsage;
     }
 }

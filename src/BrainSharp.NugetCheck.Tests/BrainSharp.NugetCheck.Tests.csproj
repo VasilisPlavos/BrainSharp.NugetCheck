@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BrainSharp.NugetCheck\BrainSharp.NugetCheck.csproj" />
+    <ProjectReference Include="..\BrainSharp.NugetCheck.Console\BrainSharp.NugetCheck.ConsoleApp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

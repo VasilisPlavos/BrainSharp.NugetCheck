@@ -1,10 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- The npm wrappers start this with `dotnet <dll>`: run on any installed runtime >= 10. -->
+    <RollForward>Major</RollForward>
+    <!-- Must not change: src/npx/shared/app.js starts this dll by name. -->
+    <AssemblyName>BrainSharp.NugetCheck.ConsoleApp</AssemblyName>
+    <RootNamespace>BrainSharp.NugetCheck.ConsoleApp</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>

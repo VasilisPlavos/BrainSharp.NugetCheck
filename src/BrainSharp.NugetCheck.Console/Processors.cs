@@ -1,9 +1,11 @@
-﻿using BrainSharp.NugetCheck.Entities;
+using BrainSharp.NugetCheck.Entities;
 
 namespace BrainSharp.NugetCheck.ConsoleApp;
 
 public static class Processors
 {
+    private static NugetCheck CreateNugetCheck() => new(progress: new ConsoleProgress());
+
     private static void DoReport(NugetPackageResults nugetPackageResults)
     {
         Console.WriteLine($"-- {nugetPackageResults.NugetPackageId} {nugetPackageResults.NugetPackageOriginalVersion} has {nugetPackageResults.Warnings.Count} warnings.");
@@ -35,18 +37,21 @@ public static class Processors
         }
     }
 
-    public static async Task CheckPackageAndTransientsAsync(string packageName, string packageVersion)
+    /// <returns>The number of warnings found.</returns>
+    public static async Task<int> CheckPackageAndTransientsAsync(string packageName, string packageVersion)
     {
-        var nugetCheck = new NugetCheck();
-        var nugetPackageResults = await nugetCheck.CheckPackageAndTransientsAsync(packageName, packageVersion);
+        var nugetPackageResults = await CreateNugetCheck().CheckPackageAndTransientsAsync(packageName, packageVersion);
+        Console.WriteLine();
         DoReport(nugetPackageResults);
+        return nugetPackageResults.Warnings.Count;
     }
 
-    public static async Task ScanEverythingAsync(string currentDirectory)
+    /// <returns>The number of warnings found in all projects.</returns>
+    public static async Task<int> ScanDirectoryAsync(string directory)
     {
         Console.Write("Scanning everything...");
-        var files = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.csproj", SearchOption.AllDirectories);
-        Console.WriteLine($"{files.Length} files found to scan.");
+        var files = ProjectFinder.FindProjectFiles(directory);
+        Console.WriteLine($"{files.Count} files found to scan.");
 
         Console.WriteLine();
         Console.WriteLine("Files to scan:");
@@ -55,20 +60,26 @@ public static class Processors
             Console.WriteLine($"- {file}");
         }
 
+        // one instance for all projects: packages are loaded once, while dedup still restarts per root package
+        var nugetCheck = CreateNugetCheck();
+        var totalWarnings = 0;
         foreach (var file in files)
         {
             Console.WriteLine();
             Console.WriteLine("------------------------------------------------------");
             Console.WriteLine();
-            var filePath = File.Exists(file) ? file : Path.Combine(Directory.GetCurrentDirectory(), file);
-            await ScanProjectAsync(filePath);
+            totalWarnings += await ScanProjectAsync(nugetCheck, file);
         }
+
+        return totalWarnings;
     }
 
-    public static async Task ScanProjectAsync(string filePath)
+    /// <returns>The number of warnings found.</returns>
+    public static Task<int> ScanProjectAsync(string filePath) => ScanProjectAsync(CreateNugetCheck(), filePath);
+
+    private static async Task<int> ScanProjectAsync(NugetCheck nugetCheck, string filePath)
     {
         Console.WriteLine($"Scanning {filePath}");
-        var nugetCheck = new NugetCheck();
         var result = await nugetCheck.CheckPackageAndTransientsAsync(filePath);
         Console.WriteLine();
         Console.WriteLine($"File scanned. Found {result.TotalWarnings} warnings.");
@@ -80,5 +91,7 @@ public static class Processors
             Console.WriteLine();
             DoReport(nugetPackageResult);
         }
+
+        return result.TotalWarnings;
     }
 }
