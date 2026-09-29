@@ -83,6 +83,25 @@ public class FilePackageCacheTests
     }
 
     [Test]
+    public void ResolveDefaultLocation_NoLocalApplicationData_UsesAbsoluteTempPath()
+    {
+        // on Linux containers without a home folder GetFolderPath returns ""; never fall back to the current directory
+        var location = FilePackageCache.ResolveDefaultLocation("");
+
+        Assert.That(Path.IsPathRooted(location), Is.True);
+        Assert.That(location, Does.StartWith(Path.GetTempPath()));
+    }
+
+    [Test]
+    public void ResolveDefaultLocation_LocalApplicationData_UsesIt()
+    {
+        var localApplicationData = Path.Combine(_directory, "LocalAppData");
+
+        Assert.That(FilePackageCache.ResolveDefaultLocation(localApplicationData),
+            Is.EqualTo(Path.Combine(localApplicationData, "BrainSharp.NugetCheck", "cache")));
+    }
+
+    [Test]
     public async Task Clear_AfterSave_RemovesPackages()
     {
         var cache = new FilePackageCache(_directory);

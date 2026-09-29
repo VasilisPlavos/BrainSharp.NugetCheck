@@ -6,8 +6,12 @@ namespace BrainSharp.NugetCheck.Services;
 /// <summary>Best-effort JSON cache: one file per package. Any read or write problem is treated as a cache miss.</summary>
 public sealed class FilePackageCache : IPackageCache
 {
-    public static string DefaultLocation { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BrainSharp.NugetCheck", "cache");
+    public static string DefaultLocation { get; } = ResolveDefaultLocation(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify));
+
+    // GetFolderPath returns "" on Linux when there is no home folder (e.g. containers); never fall back to the current directory.
+    internal static string ResolveDefaultLocation(string localApplicationData) => Path.Combine(
+        string.IsNullOrEmpty(localApplicationData) ? Path.GetTempPath() : localApplicationData, "BrainSharp.NugetCheck", "cache");
 
     public FilePackageCache(string? location = null)
     {
