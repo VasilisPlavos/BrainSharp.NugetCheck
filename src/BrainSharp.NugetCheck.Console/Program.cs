@@ -18,7 +18,7 @@ class Program
 
         if (args[0] == "storage")
         {
-            Console.WriteLine(Path.Combine(AppContext.BaseDirectory, "storage"));
+            Console.WriteLine(BrainSharp.NugetCheck.Services.FilePackageCache.DefaultLocation);
             return;
         }
 

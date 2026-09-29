@@ -1,11 +1,9 @@
-﻿using System.Text.Json.Serialization;
-
 namespace BrainSharp.NugetCheck.Dtos;
 
 public class DependencyDto
 {
-    public string type { get; set; }
-    [JsonPropertyName("id")]
-    public string PackageId { get; set; }
-    public string range { get; set; }
+    public required string Id { get; set; }
+
+    /// <summary>NuGet version range, e.g. "[4.1.0, )".</summary>
+    public required string VersionRange { get; set; }
 }
