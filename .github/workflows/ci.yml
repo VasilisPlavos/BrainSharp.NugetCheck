@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC: integration tests against nuget.org
+
+jobs:
+  build-test:
+    if: github.event_name != 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Build
+        run: dotnet build -c Release
+      - name: Unit tests
+        run: dotnet test -c Release --no-build --filter "TestCategory!=Integration"
+      - name: Pack library
+        run: dotnet pack BrainSharp.NugetCheck/BrainSharp.NugetCheck.csproj -c Release --no-build -o ../artifacts
+      - name: Build npm publisher
+        run: dotnet build npx/NpxPublisher -c Release
+      - name: Check npm launcher
+        run: node --check npx/shared/app.js
+
+  integration:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Integration tests (nuget.org)
+        run: dotnet test -c Release --filter "TestCategory=Integration"
