@@ -24,6 +24,7 @@ npx nugetscan storage                                         # where the local 
 | 0 | No warnings |
 | 1 | At least one warning (vulnerable, deprecated, unlisted, not found) |
 | 2 | Invalid usage |
+| 3 | The scan could not run (e.g. nuget.org unreachable, malformed project file) |
 
 So `npx nugetscan .` can gate a CI pipeline.
 

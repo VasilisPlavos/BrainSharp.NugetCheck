@@ -32,7 +32,7 @@ CI (`.github/workflows/ci.yml`) runs build, unit tests and pack on Ubuntu and Wi
 - `IPackageCache` → `FilePackageCache` — one JSON file per lower-cased package id under `LocalApplicationData/BrainSharp.NugetCheck/cache`; entries are fresh for 1 day; any I/O or JSON error is a cache miss.
 - Version resolution — dependency ranges use `VersionRange.FindBestMatch` (NuGet's lowest applicable version). Root versions: an exact version must exist (compared as `NuGetVersion`, so `4.0` == `4.0.0`); pins, ranges and floats (`[1.0.0]`, `1.*`) resolve like NuGet.
 - Warnings — exact strings in `Entities/WarningMessages.cs`.
-- CLI — `CommandLineParser` → `CliCommand` records → `Program` → `Processors` (console report). Exit codes in `ExitCodes`: 0 no warnings, 1 warnings, 2 invalid usage. `ProjectFinder` skips `bin`, `obj`, `node_modules`.
+- CLI — `CommandLineParser` → `CliCommand` records → `Program` → `Processors` (console report). Exit codes in `ExitCodes`: 0 no warnings, 1 warnings, 2 invalid usage, 3 scan could not run (a directory scan keeps going past a failing project). `Program.RunAsync` is the testable entry point. `ProjectFinder` skips `bin`, `obj`, `node_modules`.
 
 ## Conventions
 

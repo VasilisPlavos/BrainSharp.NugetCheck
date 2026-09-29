@@ -18,4 +18,8 @@
     <ProjectReference Include="..\BrainSharp.NugetCheck\BrainSharp.NugetCheck.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="BrainSharp.NugetCheck.Tests" />
+  </ItemGroup>
+
 </Project>

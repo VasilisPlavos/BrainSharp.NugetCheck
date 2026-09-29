@@ -9,7 +9,7 @@ public static class CommandLineParser
           nugetscan .                                         Check every project below the current folder
           nugetscan storage                                   Show where the local cache is stored
 
-        Exit codes: 0 = no warnings, 1 = warnings found, 2 = invalid usage
+        Exit codes: 0 = no warnings, 1 = warnings found, 2 = invalid usage, 3 = scan could not run
         """;
 
     public static CliCommand Parse(string[] args, string currentDirectory) => args switch

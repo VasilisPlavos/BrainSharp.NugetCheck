@@ -4,8 +4,6 @@ namespace BrainSharp.NugetCheck.ConsoleApp;
 
 public static class Processors
 {
-    private static NugetCheck CreateNugetCheck() => new(progress: new ConsoleProgress());
-
     private static void DoReport(NugetPackageResults nugetPackageResults)
     {
         Console.WriteLine($"-- {nugetPackageResults.NugetPackageId} {nugetPackageResults.NugetPackageOriginalVersion} has {nugetPackageResults.Warnings.Count} warnings.");
@@ -38,16 +36,17 @@ public static class Processors
     }
 
     /// <returns>The number of warnings found.</returns>
-    public static async Task<int> CheckPackageAndTransientsAsync(string packageName, string packageVersion)
+    public static async Task<int> CheckPackageAndTransientsAsync(NugetCheck nugetCheck, string packageName, string packageVersion)
     {
-        var nugetPackageResults = await CreateNugetCheck().CheckPackageAndTransientsAsync(packageName, packageVersion);
+        var nugetPackageResults = await nugetCheck.CheckPackageAndTransientsAsync(packageName, packageVersion);
         Console.WriteLine();
         DoReport(nugetPackageResults);
         return nugetPackageResults.Warnings.Count;
     }
 
-    /// <returns>The number of warnings found in all projects.</returns>
-    public static async Task<int> ScanDirectoryAsync(string directory)
+    /// <summary>Scans every project below <paramref name="directory"/>; a project that cannot be scanned does not stop the others.</summary>
+    /// <remarks>Uses one <see cref="NugetCheck"/> for all projects: packages are loaded once, while dedup still restarts per root package.</remarks>
+    public static async Task<(int WarningCount, int FailedCount)> ScanDirectoryAsync(NugetCheck nugetCheck, string directory)
     {
         Console.Write("Scanning everything...");
         var files = ProjectFinder.FindProjectFiles(directory);
@@ -60,24 +59,36 @@ public static class Processors
             Console.WriteLine($"- {file}");
         }
 
-        // one instance for all projects: packages are loaded once, while dedup still restarts per root package
-        var nugetCheck = CreateNugetCheck();
-        var totalWarnings = 0;
+        var warningCount = 0;
+        var failedCount = 0;
         foreach (var file in files)
         {
             Console.WriteLine();
             Console.WriteLine("------------------------------------------------------");
             Console.WriteLine();
-            totalWarnings += await ScanProjectAsync(nugetCheck, file);
+            try
+            {
+                warningCount += await ScanProjectAsync(nugetCheck, file);
+            }
+            catch (Exception e)
+            {
+                failedCount++;
+                Console.Error.WriteLine();
+                Console.Error.WriteLine($"Could not scan {file}: {e.Message}");
+            }
         }
 
-        return totalWarnings;
+        if (failedCount > 0)
+        {
+            Console.Error.WriteLine();
+            Console.Error.WriteLine($"{failedCount} of {files.Count} projects could not be scanned.");
+        }
+
+        return (warningCount, failedCount);
     }
 
     /// <returns>The number of warnings found.</returns>
-    public static Task<int> ScanProjectAsync(string filePath) => ScanProjectAsync(CreateNugetCheck(), filePath);
-
-    private static async Task<int> ScanProjectAsync(NugetCheck nugetCheck, string filePath)
+    public static async Task<int> ScanProjectAsync(NugetCheck nugetCheck, string filePath)
     {
         Console.WriteLine($"Scanning {filePath}");
         var result = await nugetCheck.CheckPackageAndTransientsAsync(filePath);

@@ -11,5 +11,5 @@ child.on('error', (error) => {
   process.exit(127);
 });
 
-// pass the scan result (0 = no warnings, 1 = warnings, 2 = invalid usage) to the caller, e.g. a CI pipeline
+// pass the scan result (0 = no warnings, 1 = warnings, 2 = invalid usage, 3 = scan could not run) to the caller, e.g. a CI pipeline
 child.on('exit', (code) => process.exit(code ?? 1));

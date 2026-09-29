@@ -27,8 +27,9 @@ Try `SixLabors.ImageSharp` `3.1.3` (vulnerable) against `3.1.4` to see the diffe
 | 0 | No warnings |
 | 1 | At least one warning: vulnerable, deprecated, unlisted, or not found |
 | 2 | Invalid usage |
+| 3 | The scan could not run (e.g. nuget.org unreachable, malformed project file) |
 
-Any other non-zero code means the scan could not run (for example nuget.org was unreachable, or `dotnet` is not installed).
+`127` means `dotnet` is not installed.
 
 Use it as a CI gate: `npx nugetcheck .`
 
