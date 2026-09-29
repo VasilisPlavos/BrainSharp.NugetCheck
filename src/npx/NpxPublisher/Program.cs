@@ -15,13 +15,14 @@ var consoleProject = Path.Combine(srcDir, "BrainSharp.NugetCheck.Console", "Brai
 if (Directory.Exists(publishDir)) Directory.Delete(publishDir, true);
 await RunAsync("dotnet", $"publish \"{consoleProject}\" -c Release -o \"{publishDir}\"", srcDir);
 
-var npm = OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
+// npm is a batch file on Windows: started directly, npm.cmd looks for npm-cli.js in the working directory, so let cmd.exe run it
+var (npm, npmArgsPrefix) = OperatingSystem.IsWindows() ? ("cmd.exe", "/c npm ") : ("npm", "");
 var publishCommands = new List<string>();
 
 foreach (var name in npmPackageNames)
 {
     var packageDir = Path.Combine(npxDir, name);
-    var version = LastLine(await RunAsync(npm, "version patch --no-git-tag-version", packageDir));
+    var version = LastLine(await RunAsync(npm, npmArgsPrefix + "version patch --no-git-tag-version", packageDir));
 
     var buildDir = Path.Combine(buildRootDir, name, version);
     Console.WriteLine($"Creating {buildDir}...");
