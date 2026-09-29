@@ -36,9 +36,11 @@ public static class Processors
     }
 
     /// <returns>The number of warnings found.</returns>
-    public static async Task<int> CheckPackageAndTransientsAsync(NugetCheck nugetCheck, string packageName, string packageVersion)
+    public static async Task<int> CheckPackageAndTransientsAsync(NugetCheck nugetCheck, string packageName, string packageVersion, string? framework)
     {
-        var nugetPackageResults = await nugetCheck.CheckPackageAndTransientsAsync(packageName, packageVersion);
+        var nugetPackageResults = framework == null
+            ? await nugetCheck.CheckPackageAndTransientsAsync(packageName, packageVersion)
+            : await nugetCheck.CheckPackageAndTransientsAsync(packageName, packageVersion, framework);
         Console.WriteLine();
         DoReport(nugetPackageResults);
         return nugetPackageResults.Warnings.Count;
@@ -92,6 +94,9 @@ public static class Processors
     {
         Console.WriteLine($"Scanning {filePath}");
         var result = await nugetCheck.CheckPackageAndTransientsAsync(filePath);
+        Console.WriteLine(result.TargetFrameworks.Count > 0
+            ? $"Target frameworks: {string.Join(", ", result.TargetFrameworks)}"
+            : "Target framework not found; checking all dependency groups");
         Console.WriteLine();
         Console.WriteLine($"File scanned. Found {result.TotalWarnings} warnings.");
         foreach (var nugetPackageResult in result.PackageReferences)

@@ -24,6 +24,22 @@ public class CommandLineParserTests
         Assert.That(Parse(commandLine), Is.InstanceOf<CliCommand.Invalid>());
     }
 
+    [TestCase("package A --version 1.0.0 --framework net8.0")]
+    [TestCase("package A --framework net8.0 --version 1.0.0")]
+    public void Parse_PackageWithFramework_ReturnsScanPackageWithFramework(string commandLine)
+    {
+        Assert.That(Parse(commandLine), Is.EqualTo(new CliCommand.ScanPackage("A", "1.0.0", "net8.0")));
+    }
+
+    [TestCase("package A --version 1.0.0 --framework")]
+    [TestCase("package A --version 1.0.0 --framework notaframework")]
+    [TestCase("package A --version 1.0.0 --framework any")]
+    [TestCase("package A --version 1.0.0 -f net8.0")]
+    public void Parse_PackageWithBadFramework_ReturnsInvalid(string commandLine)
+    {
+        Assert.That(Parse(commandLine), Is.InstanceOf<CliCommand.Invalid>());
+    }
+
     [Test]
     public void Parse_Dot_ReturnsScanDirectoryForCurrentDirectory()
     {
