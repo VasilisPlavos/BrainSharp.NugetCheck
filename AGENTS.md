@@ -31,6 +31,7 @@ CI (`.github/workflows/ci.yml`) runs build, unit tests and pack on Ubuntu and Wi
 - `INuGetMetadataSource` → `NuGetOrgMetadataSource` — the only code that talks to NuGet.Protocol; it maps NuGet types to our DTOs.
 - `IPackageCache` → `FilePackageCache` — one JSON file per lower-cased package id under `LocalApplicationData/BrainSharp.NugetCheck/cache`; entries are fresh for 1 day; any I/O or JSON error is a cache miss.
 - Version resolution — dependency ranges use `VersionRange.FindBestMatch` (NuGet's lowest applicable version). Root versions: an exact version must exist (compared as `NuGetVersion`, so `4.0` == `4.0.0`); pins, ranges and floats (`[1.0.0]`, `1.*`) resolve like NuGet.
+- Target frameworks — project scans read `TargetFramework(s)` (union over property groups, `$(...)` skipped) and walk each package's nearest dependency group per framework via `NuGetFrameworkUtility.GetNearest`, one walk per framework, warnings de-duplicated by message + breadcrumb. No framework → every group (also `package` without `--framework`).
 - Warnings — exact strings in `Entities/WarningMessages.cs`.
 - CLI — `CommandLineParser` → `CliCommand` records → `Program` → `Processors` (console report). Exit codes in `ExitCodes`: 0 no warnings, 1 warnings, 2 invalid usage, 3 scan could not run (a directory scan keeps going past a failing project). `Program.RunAsync` is the testable entry point. `ProjectFinder` skips `bin`, `obj`, `node_modules`.
 

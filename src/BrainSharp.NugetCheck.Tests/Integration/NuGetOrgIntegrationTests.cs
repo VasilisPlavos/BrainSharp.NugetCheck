@@ -68,4 +68,12 @@ public class NuGetOrgIntegrationTests
         Assert.That(results.PackageReferences, Has.Count.EqualTo(2));
         Assert.That(results.TotalWarnings, Is.GreaterThanOrEqualTo(2));
     }
+
+    [Test]
+    public async Task CheckPackageAndTransientsAsync_Net8_IgnoresNetStandard10Dependencies()
+    {
+        var results = await _nugetCheck.CheckPackageAndTransientsAsync("Newtonsoft.Json", "13.0.3", "net8.0");
+
+        Assert.That(results.Warnings.Select(x => x.BreadCrumb), Has.None.Contains("System.Net.Http"));
+    }
 }

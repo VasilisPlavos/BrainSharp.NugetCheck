@@ -12,10 +12,13 @@ Requires Node.js and the [.NET 10 runtime](https://dotnet.microsoft.com/download
 
 ```bash
 npx nugetscan package SixLabors.ImageSharp --version 3.1.3   # a package and its transitive dependencies
+npx nugetscan package Newtonsoft.Json --version 13.0.3 --framework net8.0   # only the dependencies net8.0 uses
 npx nugetscan path/to/MyProject.csproj                        # every PackageReference of a project
 npx nugetscan .                                               # every *.csproj below the current folder
 npx nugetscan storage                                         # where the local cache is stored
 ```
+
+Project scans read `<TargetFramework>` / `<TargetFrameworks>` and check only the dependencies NuGet restore would use for those frameworks. When the framework cannot be read (e.g. it comes from `Directory.Build.props`), or `package` is used without `--framework`, every dependency group is checked.
 
 `nugetcheck` is the same tool under a second name: `npx nugetcheck ...`.
 
@@ -40,6 +43,7 @@ using BrainSharp.NugetCheck;
 var nugetCheck = new NugetCheck();
 
 var result = await nugetCheck.CheckPackageAndTransientsAsync("Newtonsoft.Json", "12.0.3");
+var forNet8 = await nugetCheck.CheckPackageAndTransientsAsync("Newtonsoft.Json", "13.0.3", "net8.0");
 foreach (var warning in result.Warnings)
     Console.WriteLine($"{warning.BreadCrumb}: {warning.Message}");
 
