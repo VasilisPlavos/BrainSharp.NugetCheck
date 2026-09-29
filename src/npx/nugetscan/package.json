@@ -1,6 +1,6 @@
 {
   "name": "nugetscan",
-  "version": "0.0.29",
+  "version": "1.0.1",
   "description": "Command line tool that checks NuGet packages and their transitive dependencies for vulnerabilities",
   "bin": "./consoleapp/app.js",
   "repository": {
@@ -8,7 +8,14 @@
     "url": "git+https://github.com/VasilisPlavos/BrainSharp.NugetCheck.git",
     "directory": "src/npx/nugetscan"
   },
-  "keywords": ["nuget", "dotnet", "vulnerability", "security", "audit", "csproj"],
+  "keywords": [
+    "nuget",
+    "dotnet",
+    "vulnerability",
+    "security",
+    "audit",
+    "csproj"
+  ],
   "author": "Vasilis Plavos",
   "license": "MIT",
   "bugs": {

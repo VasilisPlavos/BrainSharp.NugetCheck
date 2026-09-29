@@ -15,7 +15,7 @@ It ships in three forms:
 ## Commands (run from `src/`)
 
 | Task | Command |
-|------|---------|
+| ------ | --------- |
 | Build (library and CLI treat warnings as errors) | `dotnet build` |
 | Unit tests (no network, fast) | `dotnet test --filter "TestCategory!=Integration"` |
 | Integration tests (real nuget.org) | `dotnet test --filter "TestCategory=Integration"` |

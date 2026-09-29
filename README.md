@@ -10,7 +10,7 @@ Checks NuGet packages **and their transitive dependencies** for known vulnerabil
 
 Requires Node.js and the [.NET 10 runtime](https://dotnet.microsoft.com/download) or newer.
 
-```
+```bash
 npx nugetscan package SixLabors.ImageSharp --version 3.1.3   # a package and its transitive dependencies
 npx nugetscan path/to/MyProject.csproj                        # every PackageReference of a project
 npx nugetscan .                                               # every *.csproj below the current folder
@@ -20,7 +20,7 @@ npx nugetscan storage                                         # where the local 
 `nugetcheck` is the same tool under a second name: `npx nugetcheck ...`.
 
 | Exit code | Meaning |
-|-----------|---------|
+| ----------- | --------- |
 | 0 | No warnings |
 | 1 | At least one warning (vulnerable, deprecated, unlisted, not found) |
 | 2 | Invalid usage |
@@ -30,7 +30,7 @@ So `npx nugetscan .` can gate a CI pipeline.
 
 ## Library
 
-```
+```bash
 dotnet add package BrainSharp.NugetCheck
 ```
 
@@ -51,12 +51,21 @@ Metadata is cached for 24 hours in the local application data folder. Pass your 
 
 ## Development
 
-```
+```bash
 cd src
 dotnet build
 dotnet test --filter "TestCategory!=Integration"   # fast, no network
 dotnet test --filter "TestCategory=Integration"    # against nuget.org
 ```
+
+## Roadmap
+
+* Use more resources from <https://api.nuget.org/v3/index.json>
+* <https://learn.microsoft.com/en-us/nuget/reference/nuget-client-sdk>
+* <https://www.nuget.org/packages/NuGet.Protocol>
+* <https://github.com/Azure/azure-cli/issues/24108>
+* <https://www.google.com/search?q=nuget+credential+provider>
+* <https://github.com/microsoft/artifacts-credprovider>
 
 See [AGENTS.md](AGENTS.md) for architecture and conventions.
 
