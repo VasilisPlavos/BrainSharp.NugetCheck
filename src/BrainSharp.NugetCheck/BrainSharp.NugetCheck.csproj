@@ -1,37 +1,40 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Title>This is the title of the solution</Title>
-    <Description>This is the description</Description>
-    <PackageProjectUrl>https://github.com/VasilisPlavos/BrainSharp.NugetCheck</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/VasilisPlavos/BrainSharp.NugetCheck</RepositoryUrl>
-    <PackageTags>nugetscheck</PackageTags>
-    <PackageReleaseNotes>Notes here</PackageReleaseNotes>
-    <!-- <PackageReadmeFile>README.md</PackageReadmeFile> -->
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- New advisories for our own dependencies should not break the build; they stay visible as warnings. -->
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
     <!-- This is the name of the NuGet package in the Nuget.org Gallery -->
     <PackageId>BrainSharp.NugetCheck</PackageId>
-    <Version>0.0.11-preview</Version>
+    <Version>0.1.0</Version>
+    <Title>BrainSharp.NugetCheck</Title>
+    <Description>Checks NuGet packages and their transitive dependencies for known vulnerabilities, deprecation and unlisted versions.</Description>
+    <PackageTags>nuget;vulnerability;security;dependencies;audit</PackageTags>
+    <PackageReleaseNotes>0.1.0: working local cache, NuGet-accurate version-range resolution, "Version not found" and "Version not specified" warnings, order-independent project scans, injectable metadata source/cache/progress, net8.0 and net10.0 targets.</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/VasilisPlavos/BrainSharp.NugetCheck</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/VasilisPlavos/BrainSharp.NugetCheck</RepositoryUrl>
     <Authors>Vasilis Plavos</Authors>
     <Company>BrainSharp</Company>
   </PropertyGroup>
 
-<!-- 
   <ItemGroup>
-    <None Include="README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-   -->
-
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="NuGet.Protocol" Version="7.9.0" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="BrainSharp.NugetCheck.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="NuGet.Protocol" Version="7.9.0" />
   </ItemGroup>
 
 </Project>

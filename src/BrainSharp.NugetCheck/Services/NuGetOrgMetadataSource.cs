@@ -15,7 +15,8 @@ public sealed class NuGetOrgMetadataSource : INuGetMetadataSource
 
     public async Task<PackageMetadataRegistrationDto[]> GetPackageVersionsAsync(string packageId, CancellationToken ct = default)
     {
-        _resource ??= await _repository.GetResourceAsync<PackageMetadataResource>(ct);
+        _resource ??= await _repository.GetResourceAsync<PackageMetadataResource>(ct)
+                      ?? throw new InvalidOperationException($"{FeedUrl} does not provide package metadata.");
 
         using var cacheContext = new SourceCacheContext();
         var metadata = await _resource.GetMetadataAsync(packageId, includePrerelease: true, includeUnlisted: true, cacheContext, NullLogger.Instance, ct);
