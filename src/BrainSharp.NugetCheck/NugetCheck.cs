@@ -267,23 +267,33 @@ public class NugetCheck
         return package.PackageMetadataRegistrations.FirstOrDefault(info => NuGetVersion.Parse(info.Identity.Version) == version);
     }
 
-    /// <summary>Reads every PackageReference with an Include, from any ItemGroup, ignoring XML namespaces.</summary>
-    internal static List<PackageDto> ReadPackageReferences(XDocument project) =>
-        project.Descendants()
-            .Where(element => element.Name.LocalName == "PackageReference" && element.Parent?.Name.LocalName == "ItemGroup")
-            .Select(element => new
-            {
-                Id = (string?)element.Attribute("Include"),
-                Version = (string?)element.Attribute("Version")
-                          ?? element.Elements().FirstOrDefault(child => child.Name.LocalName == "Version")?.Value
-            })
-            .Where(reference => !string.IsNullOrWhiteSpace(reference.Id))
+    /// <summary>
+    /// Reads every PackageReference with an Include, from any ItemGroup, ignoring XML namespaces.
+    /// With Central Package Management the version is Version, then VersionOverride, then the central PackageVersion,
+    /// and GlobalPackageReferences the project does not reference itself are appended.
+    /// </summary>
+    internal static List<PackageDto> ReadPackageReferences(XDocument project, CentralPackageVersions? central = null)
+    {
+        var enabled = central != null && (CentralPackageVersions.ReadManagePackageVersionsCentrally(project) ?? central.Enabled ?? true);
+
+        var references = ProjectXml.Items(project, "PackageReference")
             .Select(reference => new PackageDto
             {
-                NugetPackageId = reference.Id!.Trim(),
-                Version = string.IsNullOrWhiteSpace(reference.Version) ? null : reference.Version.Trim()
+                NugetPackageId = reference.Id,
+                Version = enabled
+                    ? reference.Version ?? reference.VersionOverride ?? central!.Versions.GetValueOrDefault(reference.Id)
+                    : reference.Version
             })
             .ToList();
+
+        if (enabled)
+        {
+            references.AddRange(central!.GlobalPackageReferences.Where(global =>
+                !references.Any(reference => string.Equals(reference.NugetPackageId, global.NugetPackageId, StringComparison.OrdinalIgnoreCase))));
+        }
+
+        return references;
+    }
 
     /// <summary>
     /// Reads TargetFramework and TargetFrameworks from every PropertyGroup, ignoring conditions and XML namespaces.
@@ -303,7 +313,7 @@ public class NugetCheck
     public async Task<ProjectResults> CheckPackageAndTransientsAsync(string projectFilePath, CancellationToken ct = default)
     {
         var project = XDocument.Load(projectFilePath);
-        var packageReferences = ReadPackageReferences(project);
+        var packageReferences = ReadPackageReferences(project, CentralPackageVersions.Find(projectFilePath));
         var targetFrameworks = ReadTargetFrameworks(project);
 
         var packageReferencesResults = new List<NugetPackageResults>();
