@@ -20,6 +20,8 @@ npx nugetscan storage                                         # where the local 
 
 Project scans read `<TargetFramework>` / `<TargetFrameworks>` and check only the dependencies NuGet restore would use for those frameworks. When the framework cannot be read (e.g. it comes from `Directory.Build.props`), or `package` is used without `--framework`, every dependency group is checked.
 
+With [Central Package Management](https://learn.microsoft.com/nuget/consume-packages/central-package-management), versions come from the nearest `Directory.Packages.props` above the project: `Version` on the reference, then `VersionOverride`, then the central `PackageVersion`. `<GlobalPackageReference>` items are scanned in every project. `ManagePackageVersionsCentrally=false` in the project or the props file turns this off. Imports inside `Directory.Packages.props` are not followed.
+
 `nugetcheck` is the same tool under a second name: `npx nugetcheck ...`.
 
 | Exit code | Meaning |
