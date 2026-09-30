@@ -89,6 +89,38 @@ public class ProgramTests
     }
 
     [Test]
+    public async Task RunAsync_UnreachableDependency_ReturnsScanFailed()
+    {
+        var source = new FakeMetadataSource().WithPackage("A", "1.0.0", ["B [1.0.0, )"]).WithUnreachable("B");
+
+        var exitCode = await Program.RunAsync(["package", "A", "--version", "1.0.0"], _directory, CreateNugetCheck(source));
+
+        Assert.That(exitCode, Is.EqualTo(ExitCodes.ScanFailed));
+    }
+
+    [Test]
+    public async Task RunAsync_ProjectWithUnreachableDependency_ReturnsScanFailed()
+    {
+        var source = new FakeMetadataSource().WithPackage("A", "1.0.0", ["B [1.0.0, )"]).WithUnreachable("B");
+        WriteFile("Good.csproj", ProjectReferencingA);
+
+        var exitCode = await Program.RunAsync(["Good.csproj"], _directory, CreateNugetCheck(source));
+
+        Assert.That(exitCode, Is.EqualTo(ExitCodes.ScanFailed));
+    }
+
+    [Test]
+    public async Task RunAsync_DirectoryWithUnreachableDependency_ReturnsScanFailed()
+    {
+        var source = new FakeMetadataSource().WithPackage("A", "1.0.0", ["B [1.0.0, )"]).WithUnreachable("B");
+        WriteFile(Path.Combine("Good", "Good.csproj"), ProjectReferencingA);
+
+        var exitCode = await Program.RunAsync(["."], _directory, CreateNugetCheck(source));
+
+        Assert.That(exitCode, Is.EqualTo(ExitCodes.ScanFailed));
+    }
+
+    [Test]
     public async Task RunAsync_MalformedProjectFile_ReturnsScanFailed()
     {
         WriteFile("Broken.csproj", "<Project");

@@ -18,11 +18,12 @@ class Program
                     return ExitCodes.Success;
 
                 case CliCommand.ScanDirectory command:
-                    var (warningCount, failedCount) = await Processors.ScanDirectoryAsync(nugetCheck, command.DirectoryPath);
-                    return ExitCodes.FromScan(warningCount, failedCount);
+                    var (warningCount, notCheckedCount, failedCount) = await Processors.ScanDirectoryAsync(nugetCheck, command.DirectoryPath);
+                    return ExitCodes.FromScan(warningCount, notCheckedCount + failedCount);
 
                 case CliCommand.ScanProject command when File.Exists(command.ProjectFilePath):
-                    return ExitCodes.FromWarningCount(await Processors.ScanProjectAsync(nugetCheck, command.ProjectFilePath));
+                    var project = await Processors.ScanProjectAsync(nugetCheck, command.ProjectFilePath);
+                    return ExitCodes.FromScan(project.WarningCount, project.NotCheckedCount);
 
                 case CliCommand.ScanProject command:
                     return PrintUsage($"File not found: {command.ProjectFilePath}");
@@ -30,8 +31,8 @@ class Program
                 case CliCommand.ScanPackage command:
                     var forFramework = command.Framework == null ? "" : $" for {command.Framework}";
                     Console.WriteLine($"Scanning package {command.PackageId} with version {command.Version}{forFramework}");
-                    return ExitCodes.FromWarningCount(
-                        await Processors.CheckPackageAndTransientsAsync(nugetCheck, command.PackageId, command.Version, command.Framework));
+                    var package = await Processors.CheckPackageAndTransientsAsync(nugetCheck, command.PackageId, command.Version, command.Framework);
+                    return ExitCodes.FromScan(package.WarningCount, package.NotCheckedCount);
 
                 case CliCommand.Invalid command:
                     return PrintUsage(command.Reason);

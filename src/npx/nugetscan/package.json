@@ -1,6 +1,6 @@
 {
   "name": "nugetscan",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Command line tool that checks NuGet packages and their transitive dependencies for vulnerabilities",
   "bin": "./consoleapp/app.js",
   "repository": {

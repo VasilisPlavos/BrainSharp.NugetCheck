@@ -2,6 +2,7 @@ using BrainSharp.NugetCheck.Dtos;
 using BrainSharp.NugetCheck.Services;
 using Newtonsoft.Json;
 using NuGet.Protocol;
+using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
 
 namespace BrainSharp.NugetCheck.Tests.Fakes;
@@ -11,6 +12,7 @@ public class FakeMetadataSource : INuGetMetadataSource
 {
     private readonly Dictionary<string, List<PackageMetadataRegistrationDto>> _packages = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _calls = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Exception> _failures = new(StringComparer.OrdinalIgnoreCase);
 
     public FakeMetadataSource WithPackage(string id, string version, string[]? dependencies = null,
         bool vulnerable = false, bool deprecated = false, bool listed = true)
@@ -42,13 +44,30 @@ public class FakeMetadataSource : INuGetMetadataSource
         return this;
     }
 
+    /// <summary>Requests for these packages fail as if nuget.org could not be reached, wrapped the way NuGet.Protocol wraps it.</summary>
+    public FakeMetadataSource WithUnreachable(params string[] ids)
+    {
+        foreach (var id in ids)
+            _failures[id] = new FatalProtocolException($"Failed to retrieve information about '{id}'.", new HttpRequestException("nuget.org is unreachable"));
+        return this;
+    }
+
+    /// <summary>Requests for this package fail with an error that is not a network failure.</summary>
+    public FakeMetadataSource WithFailure(string id, Exception exception)
+    {
+        _failures[id] = exception;
+        return this;
+    }
+
     public PackageMetadataRegistrationDto[] VersionsOf(string id) => _packages.TryGetValue(id, out var versions) ? versions.ToArray() : [];
 
     public int CallsFor(string id) => _calls.GetValueOrDefault(id);
 
     public Task<PackageMetadataRegistrationDto[]> GetPackageVersionsAsync(string packageId, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         _calls[packageId] = CallsFor(packageId) + 1;
+        if (_failures.TryGetValue(packageId, out var failure)) throw failure;
         return Task.FromResult(VersionsOf(packageId));
     }
 

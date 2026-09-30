@@ -9,7 +9,7 @@ namespace BrainSharp.NugetCheck;
 
 /// <summary>
 /// Checks NuGet packages and their transitive dependencies for vulnerable, deprecated and unlisted versions.
-/// Not thread-safe: use one instance per concurrent scan.
+/// Not thread-safe, and remembers loaded packages and a package source outage for its lifetime: use one instance per scan.
 /// </summary>
 public class NugetCheck
 {
@@ -20,6 +20,7 @@ public class NugetCheck
     private readonly IProgress<string>? _progress;
     private readonly Dictionary<string, NugetPackage?> _packages = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _scannedPackages = new(StringComparer.OrdinalIgnoreCase);
+    private bool _sourceUnavailable;
 
     public NugetCheck(INuGetMetadataSource? source = null, IPackageCache? cache = null, IProgress<string>? progress = null)
     {
@@ -94,7 +95,13 @@ public class NugetCheck
         _scannedPackages.Clear();
         var results = new NugetPackageResults { NugetPackageId = mainPackageName };
 
-        var mainPackage = await SearchPackageAsync(mainPackageName, ct);
+        var (available, mainPackage) = await TrySearchPackageAsync(mainPackageName, ct);
+        if (!available)
+        {
+            results.Warnings.Add(CreateWarning(WarningMessages.NotChecked, $"{mainPackageName} {mainPackageVersion}"));
+            return results;
+        }
+
         if (mainPackage == null)
         {
             results.Warnings.Add(CreateWarning(WarningMessages.PackageNotFound, $"{mainPackageName} {mainPackageVersion}"));
@@ -135,7 +142,14 @@ public class NugetCheck
         {
             var requestedBreadCrumb = GetCurrentBreadCrumb(breadCrumb, dependency.Id, dependency.VersionRange);
 
-            var package = await SearchPackageAsync(dependency.Id, ct);
+            var (available, package) = await TrySearchPackageAsync(dependency.Id, ct);
+            if (!available)
+            {
+                if (_scannedPackages.Add(ScanKey(dependency.Id, dependency.VersionRange)))
+                    warnings.Add(CreateWarning(WarningMessages.NotChecked, requestedBreadCrumb));
+                continue;
+            }
+
             if (package == null)
             {
                 if (_scannedPackages.Add(ScanKey(dependency.Id, dependency.VersionRange)))
@@ -232,13 +246,29 @@ public class NugetCheck
     private static Warning CreateWarning(string message, string breadCrumb, PackageMetadataRegistrationDto? package = null) =>
         new() { Message = message, BreadCrumb = breadCrumb, Package = package };
 
+    /// <summary>Returns the package, or null when it does not exist.</summary>
+    /// <exception cref="PackageSourceUnavailableException">No fresh cache entry and the package source could not be reached.</exception>
     public async Task<NugetPackage?> SearchPackageAsync(string packageName, CancellationToken ct = default)
     {
         if (_packages.TryGetValue(packageName, out var known)) return known;
 
+        // a failed load throws before this point, so it is never remembered as "not found"
         var package = await LoadPackageAsync(packageName, ct);
         _packages[packageName] = package;
         return package;
+    }
+
+    /// <returns>Available is false when the package source could not be reached; the package is then reported as not checked.</returns>
+    private async Task<(bool Available, NugetPackage? Package)> TrySearchPackageAsync(string packageName, CancellationToken ct)
+    {
+        try
+        {
+            return (true, await SearchPackageAsync(packageName, ct));
+        }
+        catch (PackageSourceUnavailableException)
+        {
+            return (false, null);
+        }
     }
 
     private async Task<NugetPackage?> LoadPackageAsync(string packageName, CancellationToken ct)
@@ -246,7 +276,20 @@ public class NugetCheck
         var cached = await _cache.GetAsync(packageName, ct);
         if (cached != null && cached.DateScanned > DateTime.UtcNow - CacheLifetime) return cached;
 
-        var versions = await _source.GetPackageVersionsAsync(packageName, ct);
+        // after the first failure only fresh cache entries are used, so an outage does not cost a timeout per package
+        if (_sourceUnavailable) throw new PackageSourceUnavailableException(packageName);
+
+        PackageMetadataRegistrationDto[] versions;
+        try
+        {
+            versions = await _source.GetPackageVersionsAsync(packageName, ct);
+        }
+        catch (Exception e) when (!ct.IsCancellationRequested && IsNetworkFailure(e))
+        {
+            _sourceUnavailable = true;
+            throw new PackageSourceUnavailableException(packageName, e);
+        }
+
         if (versions.Length == 0) return null;
 
         var package = new NugetPackage
@@ -259,6 +302,11 @@ public class NugetCheck
         await _cache.SaveAsync(package, ct);
         return package;
     }
+
+    // NuGet.Protocol wraps transport errors (FatalProtocolException); a timeout surfaces as TaskCanceledException.
+    // Any other error is about one package and still fails the scan.
+    private static bool IsNetworkFailure(Exception? e) =>
+        e != null && (e is HttpRequestException or TimeoutException or TaskCanceledException or IOException || IsNetworkFailure(e.InnerException));
 
     /// <summary>Finds an exact version; "4.0" matches "4.0.0".</summary>
     public PackageMetadataRegistrationDto? SearchPackageVersionInfo(NugetPackage package, string packageVersion)
