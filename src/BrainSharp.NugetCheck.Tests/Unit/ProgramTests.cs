@@ -56,6 +56,30 @@ public class ProgramTests
     }
 
     [Test]
+    public async Task RunAsync_PackageWithFramework_IgnoresOtherFrameworkGroups()
+    {
+        var source = new FakeMetadataSource()
+            .WithPackage("A", "1.0.0")
+            .WithDependencyGroup("A", "1.0.0", "netstandard1.0", "Old [1.0.0, )")
+            .WithDependencyGroup("A", "1.0.0", "netstandard2.0")
+            .WithPackage("Old", "1.0.0", vulnerable: true);
+
+        var exitCode = await Program.RunAsync(["package", "A", "--version", "1.0.0", "--framework", "net8.0"], _directory,
+            CreateNugetCheck(source));
+
+        Assert.That(exitCode, Is.EqualTo(ExitCodes.Success));
+    }
+
+    [Test]
+    public async Task RunAsync_PackageWithUnknownFramework_ReturnsInvalidUsage()
+    {
+        var exitCode = await Program.RunAsync(["package", "A", "--version", "1.0.0", "--framework", "notaframework"], _directory,
+            CreateNugetCheck(new FakeMetadataSource()));
+
+        Assert.That(exitCode, Is.EqualTo(ExitCodes.InvalidUsage));
+    }
+
+    [Test]
     public async Task RunAsync_NuGetUnavailable_ReturnsScanFailed()
     {
         var exitCode = await Program.RunAsync(["package", "A", "--version", "1.0.0"], _directory,

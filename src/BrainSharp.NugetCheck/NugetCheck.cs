@@ -2,6 +2,7 @@ using System.Xml.Linq;
 using BrainSharp.NugetCheck.Dtos;
 using BrainSharp.NugetCheck.Entities;
 using BrainSharp.NugetCheck.Services;
+using NuGet.Frameworks;
 using NuGet.Versioning;
 
 namespace BrainSharp.NugetCheck;
@@ -27,7 +28,67 @@ public class NugetCheck
         _progress = progress;
     }
 
-    public async Task<NugetPackageResults> CheckPackageAndTransientsAsync(string mainPackageName, string mainPackageVersion, CancellationToken ct = default)
+    /// <summary>Checks a package against every dependency group it declares.</summary>
+    public Task<NugetPackageResults> CheckPackageAndTransientsAsync(string mainPackageName, string mainPackageVersion, CancellationToken ct = default) =>
+        CheckRootAsync(mainPackageName, mainPackageVersion, null, ct);
+
+    /// <summary>Checks a package as NuGet restore resolves it for <paramref name="targetFramework"/>, e.g. "net8.0".</summary>
+    /// <exception cref="ArgumentException">The target framework is not recognised.</exception>
+    public Task<NugetPackageResults> CheckPackageAndTransientsAsync(string mainPackageName, string mainPackageVersion, string targetFramework, CancellationToken ct = default)
+    {
+        var framework = ParseTargetFramework(targetFramework)
+                        ?? throw new ArgumentException($"Unsupported target framework: {targetFramework}", nameof(targetFramework));
+        return CheckRootAsync(mainPackageName, mainPackageVersion, [framework], ct);
+    }
+
+    /// <summary>True for a concrete target framework such as "net8.0" or "netstandard2.0".</summary>
+    public static bool IsSupportedTargetFramework(string targetFramework) => ParseTargetFramework(targetFramework) != null;
+
+    internal static NuGetFramework? ParseTargetFramework(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Contains("$(")) return null;
+
+        try
+        {
+            var framework = NuGetFramework.Parse(value.Trim());
+            return framework.IsSpecificFramework ? framework : null;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    // One walk per framework; a warning reached through several frameworks is reported once.
+    private async Task<NugetPackageResults> CheckRootAsync(string mainPackageName, string mainPackageVersion,
+        IReadOnlyList<NuGetFramework>? frameworks, CancellationToken ct)
+    {
+        if (frameworks is not { Count: > 0 }) return await WalkRootAsync(mainPackageName, mainPackageVersion, null, ct);
+
+        var walks = new List<NugetPackageResults>();
+        foreach (var framework in frameworks)
+        {
+            walks.Add(await WalkRootAsync(mainPackageName, mainPackageVersion, WithRestorePlatformVersion(framework), ct));
+        }
+
+        var results = walks[0];
+        results.Warnings = walks.SelectMany(walk => walk.Warnings).DistinctBy(warning => (warning.Message, warning.BreadCrumb)).ToList();
+        return results;
+    }
+
+    // The SDK restores a bare "net8.0-windows" as net8.0-windows7.0; other platforms get their workload's version,
+    // which we cannot know, so any version of that platform is accepted.
+    private static NuGetFramework WithRestorePlatformVersion(NuGetFramework framework)
+    {
+        if (!framework.HasPlatform || framework.PlatformVersion.Major > 0 || framework.PlatformVersion.Minor > 0) return framework;
+
+        var platformVersion = string.Equals(framework.Platform, "windows", StringComparison.OrdinalIgnoreCase)
+            ? new Version(7, 0)
+            : new Version(int.MaxValue, 0);
+        return new NuGetFramework(framework.Framework, framework.Version, framework.Platform, platformVersion);
+    }
+
+    private async Task<NugetPackageResults> WalkRootAsync(string mainPackageName, string mainPackageVersion, NuGetFramework? framework, CancellationToken ct)
     {
         // every root package gets its own walk, so project results do not depend on reference order
         _scannedPackages.Clear();
@@ -53,14 +114,24 @@ public class NugetCheck
 
         var breadCrumb = $"{mainPackage.NugetPackageId} {mainPackageInfo.OriginalVersion}";
         results.Warnings.AddRange(GetPackageWarnings(mainPackageInfo, breadCrumb));
-        results.Warnings.AddRange(await GetDependencyWarningsAsync(mainPackageInfo.DependencySets, breadCrumb, ct));
+        results.Warnings.AddRange(await GetDependencyWarningsAsync(SelectDependencies(mainPackageInfo, framework), breadCrumb, framework, ct));
         return results;
     }
 
-    private async Task<List<Warning>> GetDependencyWarningsAsync(IEnumerable<DependencyGroupDto> dependencyGroups, string breadCrumb, CancellationToken ct)
+    // NuGet restore uses only the nearest compatible group ("any" included); no framework means every group.
+    private static IEnumerable<DependencyDto> SelectDependencies(PackageMetadataRegistrationDto packageInfo, NuGetFramework? framework)
+    {
+        if (framework == null) return packageInfo.DependencySets.SelectMany(group => group.Packages);
+
+        var nearest = NuGetFrameworkUtility.GetNearest(packageInfo.DependencySets, framework, group => NuGetFramework.Parse(group.TargetFramework));
+        return nearest?.Packages ?? [];
+    }
+
+    private async Task<List<Warning>> GetDependencyWarningsAsync(IEnumerable<DependencyDto> dependencies, string breadCrumb,
+        NuGetFramework? framework, CancellationToken ct)
     {
         var warnings = new List<Warning>();
-        foreach (var dependency in dependencyGroups.SelectMany(group => group.Packages))
+        foreach (var dependency in dependencies)
         {
             var requestedBreadCrumb = GetCurrentBreadCrumb(breadCrumb, dependency.Id, dependency.VersionRange);
 
@@ -85,7 +156,7 @@ public class NugetCheck
 
             var currentBreadCrumb = GetCurrentBreadCrumb(breadCrumb, package.NugetPackageId, packageInfo.OriginalVersion);
             warnings.AddRange(GetPackageWarnings(packageInfo, currentBreadCrumb));
-            warnings.AddRange(await GetDependencyWarningsAsync(packageInfo.DependencySets, currentBreadCrumb, ct));
+            warnings.AddRange(await GetDependencyWarningsAsync(SelectDependencies(packageInfo, framework), currentBreadCrumb, framework, ct));
         }
 
         return warnings;
@@ -214,9 +285,26 @@ public class NugetCheck
             })
             .ToList();
 
+    /// <summary>
+    /// Reads TargetFramework and TargetFrameworks from every PropertyGroup, ignoring conditions and XML namespaces.
+    /// MSBuild properties such as "$(Tfm)" and unknown frameworks are skipped.
+    /// </summary>
+    internal static List<NuGetFramework> ReadTargetFrameworks(XDocument project) =>
+        project.Descendants()
+            .Where(element => element.Name.LocalName is "TargetFramework" or "TargetFrameworks"
+                              && element.Parent?.Name.LocalName == "PropertyGroup")
+            .SelectMany(element => element.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(ParseTargetFramework)
+            .OfType<NuGetFramework>()
+            .Distinct()
+            .ToList();
+
+    /// <summary>Checks every PackageReference of a project for the project's target frameworks; without one, every dependency group is checked.</summary>
     public async Task<ProjectResults> CheckPackageAndTransientsAsync(string projectFilePath, CancellationToken ct = default)
     {
-        var packageReferences = ReadPackageReferences(XDocument.Load(projectFilePath));
+        var project = XDocument.Load(projectFilePath);
+        var packageReferences = ReadPackageReferences(project);
+        var targetFrameworks = ReadTargetFrameworks(project);
 
         var packageReferencesResults = new List<NugetPackageResults>();
         foreach (var package in packageReferences)
@@ -231,12 +319,13 @@ public class NugetCheck
                 continue;
             }
 
-            packageReferencesResults.Add(await CheckPackageAndTransientsAsync(package.NugetPackageId, package.Version, ct));
+            packageReferencesResults.Add(await CheckRootAsync(package.NugetPackageId, package.Version, targetFrameworks, ct));
         }
 
         return new ProjectResults
         {
             ProjectFilePath = projectFilePath,
+            TargetFrameworks = targetFrameworks.Select(framework => framework.GetShortFolderName()).ToList(),
             PackageReferences = packageReferencesResults,
             TotalWarnings = packageReferencesResults.Sum(package => package.Warnings.Count)
         };

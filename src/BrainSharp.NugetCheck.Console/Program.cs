@@ -28,8 +28,10 @@ class Program
                     return PrintUsage($"File not found: {command.ProjectFilePath}");
 
                 case CliCommand.ScanPackage command:
-                    Console.WriteLine($"Scanning package {command.PackageId} with version {command.Version}");
-                    return ExitCodes.FromWarningCount(await Processors.CheckPackageAndTransientsAsync(nugetCheck, command.PackageId, command.Version));
+                    var forFramework = command.Framework == null ? "" : $" for {command.Framework}";
+                    Console.WriteLine($"Scanning package {command.PackageId} with version {command.Version}{forFramework}");
+                    return ExitCodes.FromWarningCount(
+                        await Processors.CheckPackageAndTransientsAsync(nugetCheck, command.PackageId, command.Version, command.Framework));
 
                 case CliCommand.Invalid command:
                     return PrintUsage(command.Reason);

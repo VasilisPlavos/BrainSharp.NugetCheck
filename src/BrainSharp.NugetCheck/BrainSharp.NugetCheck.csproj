@@ -11,11 +11,11 @@
 
     <!-- This is the name of the NuGet package in the Nuget.org Gallery -->
     <PackageId>BrainSharp.NugetCheck</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Title>BrainSharp.NugetCheck</Title>
     <Description>Checks NuGet packages and their transitive dependencies for known vulnerabilities, deprecation and unlisted versions.</Description>
     <PackageTags>nuget;vulnerability;security;dependencies;audit</PackageTags>
-    <PackageReleaseNotes>0.1.0: working local cache, NuGet-accurate version-range resolution, "Version not found" and "Version not specified" warnings, order-independent project scans, injectable metadata source/cache/progress, net8.0 and net10.0 targets.</PackageReleaseNotes>
+    <PackageReleaseNotes>0.2.0: project scans check only the dependency groups of the project's target frameworks; new CheckPackageAndTransientsAsync overload with a target framework; ProjectResults.TargetFrameworks. 0.1.0: working local cache, NuGet-accurate version-range resolution, "Version not found" and "Version not specified" warnings, order-independent project scans, injectable metadata source/cache/progress, net8.0 and net10.0 targets.</PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/VasilisPlavos/BrainSharp.NugetCheck</PackageProjectUrl>
