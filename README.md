@@ -29,7 +29,7 @@ With [Central Package Management](https://learn.microsoft.com/nuget/consume-pack
 | 0 | No warnings |
 | 1 | At least one warning (vulnerable, deprecated, unlisted, not found) |
 | 2 | Invalid usage |
-| 3 | The scan could not run (e.g. nuget.org unreachable, malformed project file) |
+| 3 | The scan could not run or is incomplete (e.g. nuget.org unreachable, malformed project file) |
 
 So `npx nugetscan .` can gate a CI pipeline.
 
@@ -53,7 +53,7 @@ foreach (var warning in result.Warnings)
 bool? vulnerable = await nugetCheck.IsVulnerableAsync("Newtonsoft.Json", "12.0.3");
 ```
 
-Metadata is cached for 24 hours in the local application data folder. Pass your own `INuGetMetadataSource`, `IPackageCache` or `IProgress<string>` to the `NugetCheck` constructor to change where data comes from, where it is cached, or to receive progress messages.
+Metadata is cached for 24 hours in the local application data folder. When nuget.org cannot be reached, packages with fresh cache data are still checked and the others get a `WarningMessages.NotChecked` warning; older cache data is never used, and the CLI exits with 3. Pass your own `INuGetMetadataSource`, `IPackageCache` or `IProgress<string>` to the `NugetCheck` constructor to change where data comes from, where it is cached, or to receive progress messages.
 
 ## Development
 

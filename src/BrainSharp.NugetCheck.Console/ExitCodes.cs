@@ -9,6 +9,6 @@ public static class ExitCodes
 
     public static int FromWarningCount(int warningCount) => warningCount == 0 ? Success : WarningsFound;
 
-    // an incomplete scan must never look clean, so failures win over warnings
-    public static int FromScan(int warningCount, int failedCount) => failedCount > 0 ? ScanFailed : FromWarningCount(warningCount);
+    // an incomplete scan (a project that failed, a package that could not be checked) must never look clean, so it wins over warnings
+    public static int FromScan(int warningCount, int incompleteCount) => incompleteCount > 0 ? ScanFailed : FromWarningCount(warningCount);
 }

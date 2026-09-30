@@ -8,4 +8,5 @@ public static class WarningMessages
     public const string NotListed = "Package is not listed";
     public const string Vulnerable = "Package is vulnerable";
     public const string Deprecated = "Package is deprecated";
+    public const string NotChecked = "Package could not be checked";
 }

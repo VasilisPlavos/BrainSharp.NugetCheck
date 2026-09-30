@@ -35,20 +35,24 @@ public static class Processors
         }
     }
 
-    /// <returns>The number of warnings found.</returns>
-    public static async Task<int> CheckPackageAndTransientsAsync(NugetCheck nugetCheck, string packageName, string packageVersion, string? framework)
+    private static int CountNotChecked(IEnumerable<NugetPackageResults> results) =>
+        results.Sum(result => result.Warnings.Count(warning => warning.Message == WarningMessages.NotChecked));
+
+    /// <returns>The number of warnings found, and how many of them are packages that could not be checked.</returns>
+    public static async Task<(int WarningCount, int NotCheckedCount)> CheckPackageAndTransientsAsync(NugetCheck nugetCheck, string packageName,
+        string packageVersion, string? framework)
     {
         var nugetPackageResults = framework == null
             ? await nugetCheck.CheckPackageAndTransientsAsync(packageName, packageVersion)
             : await nugetCheck.CheckPackageAndTransientsAsync(packageName, packageVersion, framework);
         Console.WriteLine();
         DoReport(nugetPackageResults);
-        return nugetPackageResults.Warnings.Count;
+        return (nugetPackageResults.Warnings.Count, CountNotChecked([nugetPackageResults]));
     }
 
     /// <summary>Scans every project below <paramref name="directory"/>; a project that cannot be scanned does not stop the others.</summary>
     /// <remarks>Uses one <see cref="NugetCheck"/> for all projects: packages are loaded once, while dedup still restarts per root package.</remarks>
-    public static async Task<(int WarningCount, int FailedCount)> ScanDirectoryAsync(NugetCheck nugetCheck, string directory)
+    public static async Task<(int WarningCount, int NotCheckedCount, int FailedCount)> ScanDirectoryAsync(NugetCheck nugetCheck, string directory)
     {
         Console.Write("Scanning everything...");
         var files = ProjectFinder.FindProjectFiles(directory);
@@ -62,6 +66,7 @@ public static class Processors
         }
 
         var warningCount = 0;
+        var notCheckedCount = 0;
         var failedCount = 0;
         foreach (var file in files)
         {
@@ -70,7 +75,9 @@ public static class Processors
             Console.WriteLine();
             try
             {
-                warningCount += await ScanProjectAsync(nugetCheck, file);
+                var (projectWarnings, projectNotChecked) = await ScanProjectAsync(nugetCheck, file);
+                warningCount += projectWarnings;
+                notCheckedCount += projectNotChecked;
             }
             catch (Exception e)
             {
@@ -86,11 +93,11 @@ public static class Processors
             Console.Error.WriteLine($"{failedCount} of {files.Count} projects could not be scanned.");
         }
 
-        return (warningCount, failedCount);
+        return (warningCount, notCheckedCount, failedCount);
     }
 
-    /// <returns>The number of warnings found.</returns>
-    public static async Task<int> ScanProjectAsync(NugetCheck nugetCheck, string filePath)
+    /// <returns>The number of warnings found, and how many of them are packages that could not be checked.</returns>
+    public static async Task<(int WarningCount, int NotCheckedCount)> ScanProjectAsync(NugetCheck nugetCheck, string filePath)
     {
         Console.WriteLine($"Scanning {filePath}");
         var result = await nugetCheck.CheckPackageAndTransientsAsync(filePath);
@@ -108,6 +115,6 @@ public static class Processors
             DoReport(nugetPackageResult);
         }
 
-        return result.TotalWarnings;
+        return (result.TotalWarnings, CountNotChecked(result.PackageReferences));
     }
 }

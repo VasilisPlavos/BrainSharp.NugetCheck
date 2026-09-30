@@ -27,7 +27,7 @@ Try `SixLabors.ImageSharp` `3.1.3` (vulnerable) against `3.1.4` to see the diffe
 | 0 | No warnings |
 | 1 | At least one warning: vulnerable, deprecated, unlisted, or not found |
 | 2 | Invalid usage |
-| 3 | The scan could not run (e.g. nuget.org unreachable, malformed project file) |
+| 3 | The scan could not run or is incomplete (e.g. nuget.org unreachable, malformed project file) |
 
 `127` means `dotnet` is not installed.
 
@@ -36,3 +36,5 @@ Use it as a CI gate: `npx nugetcheck .`
 ## Cache
 
 Package metadata from nuget.org is cached for 24 hours in the folder printed by `npx nugetcheck storage`, so repeated scans are fast.
+
+When nuget.org cannot be reached, packages with fresh cache data are still checked; the others are reported as "Package could not be checked" and the exit code is 3. Cache data older than 24 hours is never used.
