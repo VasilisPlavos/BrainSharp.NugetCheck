@@ -23,7 +23,7 @@ It ships in three forms:
 | Pack the library | `dotnet pack BrainSharp.NugetCheck -c Release` |
 | Build the npm packages | `dotnet run --project npx/NpxPublisher` (bumps patch versions, prints `npm publish` commands) |
 
-CI (`.github/workflows/ci.yml`) runs build, unit tests and pack on Ubuntu and Windows; integration tests run weekly and on manual dispatch.
+CI (`.github/workflows/ci.yml`) runs build, unit tests and pack on Ubuntu and Windows; integration tests run every two months and on manual dispatch.
 
 ## Architecture
 
