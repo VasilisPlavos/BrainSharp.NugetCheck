@@ -35,6 +35,8 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="NuGet.Protocol" Version="7.9.0" />
+    <!-- Pinned above NuGet.Packaging's 8.0.1 (CVE-2026-84008, CVE-2026-70162); drop once NuGet.Protocol ships with 8.0.2 or later. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
   </ItemGroup>
 
 </Project>
